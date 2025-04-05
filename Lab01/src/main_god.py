@@ -25,7 +25,7 @@ def decrypt_char(blocks, last_block, j):
         print("trying", i)
 
         res = oracle(DECRYPT, utils.bytes_to_hex(cipher))
-        if "invalid" in res:
+        if "invalid" in res or "json" in res:
             continue
         else:
             print(i)
