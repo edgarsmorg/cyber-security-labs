@@ -4,8 +4,9 @@ import socket
 import utils
 ENCRYPT = ("cc5327.hackerlab.cl", 5312)
 DECRYPT = ("cc5327.hackerlab.cl", 5313)
+BLOCK_SIZE = 16 # obtenido en la experimentacion
 
-def fuc(CONNECTION_ADDR, MESSAGE):
+def oracle(CONNECTION_ADDR, MESSAGE):
     sock_input, sock_output = utils.create_socket(CONNECTION_ADDR)
     try:
         response = MESSAGE
@@ -16,27 +17,54 @@ def fuc(CONNECTION_ADDR, MESSAGE):
     except Exception as e:
         return e
 
-def decrypt_char(crypt, j):
+def decrypt_char(blocks, last_block, j):
     for i in range(256):
-        crypt[j] = i
-        print("tryig", i)
-        res = fuc(DECRYPT, utils.bytes_to_hex(crypt))
-        print("tryig", i)
+        last_block[j] = i
+        blocks[-1] = last_block
+        cipher = utils.join_blocks(blocks)
+        print("trying", i)
+
+        res = oracle(DECRYPT, utils.bytes_to_hex(cipher))
+        if "invalid" in res:
+            continue
+        else:
+            print(i)
+            return i
+        
+def decrypt_last_block(blocks):
+    key = bytearray(BLOCK_SIZE)
+    last_block = blocks[-1]
+    for i in range(len(last_block)-1, -1, -1):
+        key[int(i)] = decrypt_char(blocks, last_block, i)
+        print(key)
+    print(key)
+
+
+# Parte D
+def decrypt_last_char(encrypt):
+    encrypt = utils.hex_to_bytes(encrypt)
+    for i in range(256):
+        encrypt[-1] = i
+        print("trying", i)
+        res = oracle(DECRYPT, utils.bytes_to_hex(encrypt))
         if "invalid" in res:
             continue
         else:
             print(i, res)
             return bytes(i)
         
-def decrypt_block(block):
-    key = bytearray()
-    for i in range(len(block)-1, 0, -1):
-        key += decrypt_char(block, i)
-    print(key.reverse())
-             
 if __name__ == "__main__":
-    res = fuc(ENCRYPT, MESSAGE = input("message:"))
-    res = utils.hex_to_bytes(res)
-    blocks = utils.split_blocks(res, 16)
-    print(blocks)
+    ciphertext = oracle(ENCRYPT, MESSAGE = input("message:"))
+
+    # # Parte D
+    # print(ciphertext)
+    # decrypt_last_char(ciphertext)
+    # Parte E
+    ciphertext = utils.hex_to_bytes(ciphertext)
+    cipher_blocks = utils.split_blocks(ciphertext, 16)
+    decrypt_last_block(cipher_blocks)
+
+
+
+
 
