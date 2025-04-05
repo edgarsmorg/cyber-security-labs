@@ -55,14 +55,28 @@ def decrypt_last_block(blocks):
     return key
 
 # Parte F
+def decrypt_char2(blocks, num_block, j):
+    block = blocks[num_block]
+    for i in range(256):
+        block[j] = i
+        blocks[num_block] = block
+        cipher = utils.join_blocks(blocks)
+        print("trying", i)
+
+        res = oracle(DECRYPT, utils.bytes_to_hex(cipher))
+        if "invalid" in res or "json" in res:
+            continue
+        else:
+            return i
+        
 def decrypt_full_message(cipher_blocks):
     plaintext_blocks = []
 
     # Recorremos de derecha a izquierda, desde el último bloque al segundo
-    for i in range(len(cipher_blocks) - 2, 0, -1):
+    for i in range(len(cipher_blocks) - 1, 0, -1):
         # Copiamos los bloques relevantes
-        c_prev = cipher_blocks[i - 1][:]  # bloque anterior (IV o Ci-1)
-        c_curr = cipher_blocks[i][:]      # bloque actual (Ci)
+        c_prev = cipher_blocks[i - 1]  # bloque anterior (IV o Ci-1)
+        c_curr = cipher_blocks[i]      # bloque actual (Ci)
 
         # Armamos el mensaje a descifrar: [c_prev, c_curr]
         crafted_blocks = [bytearray(c_prev), bytearray(c_curr)]
@@ -70,12 +84,14 @@ def decrypt_full_message(cipher_blocks):
         # Usamos la función que ya construye el bloque intermedio
         decrypted = bytearray(BLOCK_SIZE)
         for j in range(BLOCK_SIZE - 1, -1, -1):
-            decrypted[j] = decrypt_char(crafted_blocks[:], crafted_blocks[0][:], j)
-
+            decrypted[j] = decrypt_char2(cipher_blocks, num_block = i, j = j)
+            print(decrypted)
         # Calculamos el bloque de texto plano: p_i = decrypt(ci) ^ c_{i-1}
         plaintext_block = bytearray(
             [decrypted[b] ^ c_prev[b] for b in range(BLOCK_SIZE)]
         )
+        print(plaintext_block)
+        print(plaintext_blocks)
         plaintext_blocks.insert(0, plaintext_block)  # insertamos al inicio
 
     # Juntamos los bloques en un solo mensaje
@@ -96,7 +112,9 @@ if __name__ == "__main__":
     # Parte E
     ciphertext = utils.hex_to_bytes(ciphertext)
     cipher_blocks = utils.split_blocks(ciphertext, 16)
-    decrypt_last_block(cipher_blocks)
+    key_plaintext = decrypt_full_message(cipher_blocks)
+    print("\n✅ Mensaje descifrado (sin padding):")
+    print(key_plaintext.decode(errors="ignore"))
 
 
 
