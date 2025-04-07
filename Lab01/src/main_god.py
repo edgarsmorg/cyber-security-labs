@@ -1,6 +1,4 @@
 import socket
-
-# We connect to a (host,port) tuple
 import utils
 ENCRYPT = ("cc5327.hackerlab.cl", 5312)
 DECRYPT = ("cc5327.hackerlab.cl", 5313)
@@ -10,14 +8,10 @@ def oracle(CONNECTION_ADDR, MESSAGE):
     sock_input, sock_output = utils.create_socket(CONNECTION_ADDR)
     try:
         response = MESSAGE
-        # You need to use encode() method to send a string as bytes.
         resp = utils.send_message(sock_input, sock_output, response)
         return resp
-        # Wait for a response and disconnect.
     except Exception as e:
         return e
-
-
 
 # Parte D
 def decrypt_last_char(encrypt):
@@ -66,8 +60,6 @@ def decrypt_full_message(cipher_blocks):
 
         # Armamos el mensaje a descifrar: [c_prev, c_curr]
         crafted_blocks = [bytearray(c_prev), bytearray(c_curr)]
-
-        # Usamos la función que ya construye el bloque intermedio
         decrypted = bytearray(BLOCK_SIZE)
         for j in range(BLOCK_SIZE - 1, -1, -1):
             decrypted[j] = decrypt_char(crafted_blocks[:], crafted_blocks[0][:], j)
@@ -76,9 +68,9 @@ def decrypt_full_message(cipher_blocks):
         plaintext_block = bytearray(
             [decrypted[b] ^ c_prev[b] for b in range(BLOCK_SIZE)]
         )
-        plaintext_blocks.insert(0, plaintext_block)  # insertamos al inicio
+        plaintext_blocks.insert(0, plaintext_block) 
 
-    # Juntamos los bloques en un solo mensaje
+    # Juntamos los bloques
     full_plaintext = utils.join_blocks(plaintext_blocks)
 
     # Eliminamos el padding PKCS#7
@@ -96,9 +88,9 @@ if __name__ == "__main__":
     # Parte E
     ciphertext = utils.hex_to_bytes(ciphertext)
     cipher_blocks = utils.split_blocks(ciphertext, 16)
-    decrypt_last_block(cipher_blocks)
-
-
+    #decrypt_last_block(cipher_blocks)
+    # Parte F
+    decrypt_full_message(cipher_blocks)
 
 
 
