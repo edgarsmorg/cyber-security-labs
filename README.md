@@ -39,3 +39,7 @@ Dentro de cada bloque recorremos cada byte desde el final hasta el inicio y para
 
 
 Después de descubrir un byte, se actualizan los bytes siguientes del bloque modificado para simular un padding válido más largo, lo cual permite descubrir el próximo byte en la siguiente iteración. Repetimos este proceso hasta descifrar todo el bloque. Una vez terminado un bloque, se antepone a la cadena de bloques descifrados y se continua con el que sigue. 
+
+Finalmente la clave encontrada fue la siguiente:
+
+83c804bf74f04b841b9c186342c62a1797cd87b1fe6ce7bf54d32c4a16390020
