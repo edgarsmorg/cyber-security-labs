@@ -48,48 +48,83 @@ def decrypt_last_block(blocks):
         print(key)
     return key
 
-# Parte F
-def decrypt_char2(blocks, num_block, j):
-    block = blocks[num_block]
-    for i in range(256):
-        block[j] = i
-        blocks[num_block] = block
-        cipher = utils.join_blocks(blocks)
-        print("trying", i)
+# Parte F: función de descifrado de un byte del bloque intermedio
+def decrypt_char2(blocks, num_block, j, known_plaintext):
+    original_prev = blocks[num_block - 1]
+    original_curr = blocks[num_block]
 
-        res = oracle(DECRYPT, utils.bytes_to_hex(cipher))
-        if "invalid" in res or "json" in res:
+    # Guardamos el valor original para probarlo al final
+    original_byte = original_prev[j]
+
+    padding_val = BLOCK_SIZE - j
+
+    # Probar todos los guesses, excepto el original
+    for guess in list(range(256)):
+        if guess == original_byte:
             continue
-        else:
-            return i
-        
+
+        # Copias profundas
+        crafted_prev = bytearray(original_prev)
+        crafted_curr = bytearray(original_curr)
+
+        crafted_prev[j] = guess
+
+        # Aplicar padding a los bytes ya descubiertos
+        for k in range(j + 1, BLOCK_SIZE):
+            crafted_prev[k] = known_plaintext[k] ^ padding_val
+
+        crafted_blocks = [crafted_prev, crafted_curr]
+        cipher = utils.join_blocks(crafted_blocks)
+        res = oracle(DECRYPT, utils.bytes_to_hex(cipher))
+
+        print(f"Bloque {num_block}, posición {j}, probando guess = {guess}")
+
+        if "invalid" not in res and "json" not in res:
+            print(f"[✓] Byte correcto encontrado: {guess}")
+            return guess ^ padding_val
+
+    # Si no funcionó ninguno, probar el original como último recurso
+    crafted_prev = bytearray(original_prev)
+    crafted_curr = bytearray(original_curr)
+    crafted_prev[j] = original_byte
+
+    for k in range(j + 1, BLOCK_SIZE):
+        crafted_prev[k] = known_plaintext[k] ^ padding_val
+
+    crafted_blocks = [crafted_prev, crafted_curr]
+    cipher = utils.join_blocks(crafted_blocks)
+    res = oracle(DECRYPT, utils.bytes_to_hex(cipher))
+
+    if "invalid" not in res and "json" not in res:
+        print(f"[✓] Byte original ({original_byte}) fue el correcto en última instancia")
+        return original_byte ^ padding_val
+
+    # Nada funcionó
+    print(f"[✗] No se encontró padding válido en la posición {j} del bloque {num_block}")
+    raise ValueError(f"No se encontró padding válido en el byte {j} del bloque {num_block}")
+
 def decrypt_full_message(cipher_blocks):
     plaintext_blocks = []
 
-    # Recorremos de derecha a izquierda, desde el último bloque al segundo
     for i in range(len(cipher_blocks) - 1, 0, -1):
-        # Copiamos los bloques relevantes
-        c_prev = cipher_blocks[i - 1]  # bloque anterior (IV o Ci-1)
-        c_curr = cipher_blocks[i]      # bloque actual (Ci)
+        c_prev = cipher_blocks[i - 1]
+        c_curr = cipher_blocks[i]
 
-        # Armamos el mensaje a descifrar: [c_prev, c_curr]
-        crafted_blocks = [bytearray(c_prev), bytearray(c_curr)]
         decrypted = bytearray(BLOCK_SIZE)
+
+        # Vamos de derecha a izquierda
         for j in range(BLOCK_SIZE - 1, -1, -1):
-            decrypted[j] = decrypt_char2(cipher_blocks, num_block = i, j = j)
-            print(decrypted)
-        # Calculamos el bloque de texto plano: p_i = decrypt(ci) ^ c_{i-1}
+            decrypted[j] = decrypt_char2(cipher_blocks, i, j, decrypted)
+
+        # XOR entre el intermedio y c_{i-1} para obtener el texto plano
         plaintext_block = bytearray(
             [decrypted[b] ^ c_prev[b] for b in range(BLOCK_SIZE)]
         )
-        print(plaintext_block)
-        print(plaintext_blocks)
-        plaintext_blocks.insert(0, plaintext_block)  # insertamos al inicio
+        plaintext_blocks.insert(0, plaintext_block)
 
-    # Juntamos los bloques
     full_plaintext = utils.join_blocks(plaintext_blocks)
 
-    # Eliminamos el padding PKCS#7
+    # Eliminar padding PKCS#7
     padding_len = full_plaintext[-1]
     if padding_len > BLOCK_SIZE or padding_len == 0:
         raise ValueError("Padding inválido al final del mensaje")
@@ -106,7 +141,8 @@ if __name__ == "__main__":
     cipher_blocks = utils.split_blocks(ciphertext, 16)
     #decrypt_last_block(cipher_blocks)
     # Parte F
-    decrypt_full_message(cipher_blocks)
+    mensaje_plano = decrypt_full_message(cipher_blocks)
+    print("Mensaje descifrado:", mensaje_plano.decode(errors="ignore"))
 
 
 
