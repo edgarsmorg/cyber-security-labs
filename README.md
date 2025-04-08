@@ -43,3 +43,8 @@ Después de descubrir un byte, se actualizan los bytes siguientes del bloque mod
 Finalmente la clave encontrada fue la siguiente:
 
 83c804bf74f04b841b9c186342c62a1797cd87b1fe6ce7bf54d32c4a16390020
+
+
+Y el mensaje completo:
+
+{"name":"J","secret":"83c804bf74f04b841b9c186342c62a1797cd87b1fe6ce7bf54d32c4a16390020"}
