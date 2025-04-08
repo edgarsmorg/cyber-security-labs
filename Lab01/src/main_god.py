@@ -6,47 +6,60 @@ BLOCK_SIZE = 16 # obtenido en la experimentacion
 
 def oracle(CONNECTION_ADDR, MESSAGE):
     sock_input, sock_output = utils.create_socket(CONNECTION_ADDR)
-    try:
-        response = MESSAGE
-        resp = utils.send_message(sock_input, sock_output, response)
-        return resp
-    except Exception as e:
-        return e
+    response = MESSAGE
+    resp = utils.send_message(sock_input, sock_output, response)
+    return resp
 
 # Parte D
 def decrypt_last_char(encrypt):
     encrypt = utils.hex_to_bytes(encrypt)
+    encrypt = utils.split_blocks(encrypt, BLOCK_SIZE)
+    curr = bytearray(encrypt[-1])
+    prev = bytearray(encrypt[-2])
+    prev_mod = bytearray(prev)
     for i in range(256):
-        encrypt[-1] = i
         print("trying", i)
-        res = oracle(DECRYPT, utils.bytes_to_hex(encrypt))
-        if "invalid" in res:
+        prev_mod[-1] = i
+        res = oracle(DECRYPT, utils.bytes_to_hex(utils.join_blocks([prev_mod,curr])))
+        if res.startswith("pkcs7: invalid padding"):
             continue
         else:
-            print(i, res)
-            return bytes(i)
+            plain_byte = 0x01 ^ i ^ prev[-1]
+            #caso borde
+            print(plain_byte)
+            return plain_byte
 
 # Parte E
-def decrypt_char(blocks, last_block, j):
-    for i in range(256):
-        last_block[j] = i
-        blocks[-1] = last_block
-        cipher = utils.join_blocks(blocks)
-        print("trying", i)
 
-        res = oracle(DECRYPT, utils.bytes_to_hex(cipher))
-        if "invalid" in res or "json" in res:
-            continue
-        else:
-            return i
-        
-def decrypt_last_block(blocks):
-    key = bytearray(BLOCK_SIZE)
-    last_block = blocks[-1]
-    for i in range(len(last_block)-1, -1, -1):
-        key[int(i)] = decrypt_char(blocks, last_block, i)
-        print(key)
-    return key
+def decrypt_last_block(encrypt):
+    encrypt = utils.hex_to_bytes(encrypt)
+    encrypt = utils.split_blocks(encrypt, BLOCK_SIZE)
+    decrypt = bytearray(BLOCK_SIZE)
+    middle = bytearray(BLOCK_SIZE)
+    curr = bytearray(encrypt[-1])
+    prev = bytearray(encrypt[-2])
+    prev_mod = bytearray(prev)
+    two_blocks = [prev_mod, curr]
+    for i in range(BLOCK_SIZE-1, -1, -1):
+        for j in range(256):
+            print("trying", j)
+            prev_mod[i] = j
+            res = oracle(DECRYPT, utils.bytes_to_hex(utils.join_blocks(two_blocks)))
+            if res.startswith("pkcs7: invalid padding"):
+                continue
+            else:
+                padding = BLOCK_SIZE - i
+
+                middle[i] = prev_mod[i] ^ padding
+                plain_byte = middle[i] ^ prev[i]
+                decrypt[i] = plain_byte
+
+                for k in range(i, BLOCK_SIZE):
+                    prev_mod[k] = middle[k] ^ (padding + 1)
+                
+                break
+        print(decrypt)
+    return decrypt
 
 # Parte F: función de descifrado de un byte del bloque intermedio
 def decrypt_char2(blocks, num_block, j, known_plaintext):
@@ -137,12 +150,10 @@ if __name__ == "__main__":
     # print(ciphertext)
     # decrypt_last_char(ciphertext)
     # Parte E
-    ciphertext = utils.hex_to_bytes(ciphertext)
-    cipher_blocks = utils.split_blocks(ciphertext, 16)
-    #decrypt_last_block(cipher_blocks)
-    # Parte F
-    mensaje_plano = decrypt_full_message(cipher_blocks)
-    print("Mensaje descifrado:", mensaje_plano.decode(errors="ignore"))
+    decrypt_last_block(ciphertext)
+    # # Parte F
+    # mensaje_plano = decrypt_full_message(cipher_blocks)
+    # print("Mensaje descifrado:", mensaje_plano.decode(errors="ignore"))
 
 
 
