@@ -30,7 +30,7 @@ Código adjunto. Funciona perfectamente.
 Código adjunto. Funciona perfectamente.
 
 ### f) 
-Comenzamos dividiendo el texto cifrado en bloques de tamaño 16, luego iteramos desde el penúltimo bloque ahsta el primero, ya que el primer bloque es el IV y no se descifra como parte del mensaje.
+Comenzamos dividiendo el texto cifrado en bloques de tamaño 16, luego iteramos desde el penúltimo bloque hasta el primero, ya que el primer bloque es el IV y no se descifra como parte del mensaje.
 
 Para cada bloque debemos almacenar el bloque descifrado y los valores intermedios (resultado de aplicar XOR entre el padding y el byte anterior al descifrado). Se seleccionan el bloque actual y previo (o IV si es el primero), y creamos una copia del bloque previo, con esta copia queremos lograr detectar los bytes del texto plano.
 
